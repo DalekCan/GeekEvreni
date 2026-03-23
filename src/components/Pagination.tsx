@@ -1,6 +1,17 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 export default function Pagination({ currentPage, totalPages = 500 }: { currentPage: number, totalPages?: number }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const createPageUrl = (pageNumber: number | string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', pageNumber.toString());
+    return `${pathname}?${params.toString()}`;
+  };
   
   const generatePageNumbers = () => {
     const pages = [];
@@ -47,7 +58,7 @@ export default function Pagination({ currentPage, totalPages = 500 }: { currentP
       {/* Önceki Butonu */}
       {currentPage > 1 ? (
         <Link 
-          href={`/?page=${currentPage - 1}`}
+          href={createPageUrl(currentPage - 1)}
           className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg border border-slate-700 hover:bg-slate-700 hover:text-white transition-colors"
         >
           Önceki
@@ -73,7 +84,7 @@ export default function Pagination({ currentPage, totalPages = 500 }: { currentP
           return (
             <Link 
               key={`page-${page}`}
-              href={`/?page=${page}`}
+              href={createPageUrl(page)}
               className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all ${
                 isActive 
                   ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/30' 
@@ -89,7 +100,7 @@ export default function Pagination({ currentPage, totalPages = 500 }: { currentP
       {/* Sonraki Butonu */}
       {currentPage < totalPages ? (
         <Link 
-          href={`/?page=${currentPage + 1}`}
+          href={createPageUrl(currentPage + 1)}
           className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg border border-slate-700 hover:bg-slate-700 hover:text-white transition-colors"
         >
           Sonraki

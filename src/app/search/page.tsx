@@ -5,14 +5,16 @@ import Pagination from '@/components/Pagination';
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; type?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const query = resolvedParams.q || '';
   const page = parseInt(resolvedParams.page || '1', 10);
+  const type = resolvedParams.type || 'all';
 
-  // Eğer arama terimi yoksa boş dönecek
-  const results = await searchTrending(query, page);
+  // Eğer arama terimi yoksa boş dönecek. type 'all' değilse süzgece gönder.
+  const filterType = type !== 'all' ? type : undefined;
+  const results = await searchTrending(query, page, filterType);
 
   return (
     <div className="min-h-screen bg-slate-900 border-t border-slate-800">
@@ -33,7 +35,14 @@ export default async function SearchPage({
                   "Ne aramak istersin?"
                 )}
               </h1>
-              <p className="text-slate-400 mt-1 font-medium">Bütün dizi, film ve animelerde aranıyor.</p>
+              <p className="text-slate-400 mt-1 font-medium flex items-center gap-2">
+                Bütün dizi, film ve animelerde aranıyor.
+                {type !== 'all' && (
+                  <span className="px-2 py-0.5 rounded-full bg-slate-800 text-xs border border-slate-700">
+                    Filtre: {type}
+                  </span>
+                )}
+              </p>
             </div>
         </div>
 

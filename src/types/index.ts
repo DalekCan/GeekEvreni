@@ -4,6 +4,7 @@ export interface Show {
   poster_path: string | null;
   overview: string; // TMDB uses overview for TV shows
   first_air_date?: string;
+  release_date?: string;
   
   // Eski uyumluluk veya ekstra eklentiler için opsiyoneller
   title?: string; 

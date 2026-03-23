@@ -48,17 +48,21 @@ export async function fetchFromTMDB(endpoint: string, params: string = '') {
 }
 
 /**
- * TMDB'den popüler dizileri çeker.
+ * TMDB'den popüler içerikleri çeker.
  */
-export async function getPopularShows(page: number = 1) {
+export async function getPopularShows(type: 'tv' | 'movie' | 'anime' = 'tv', page: number = 1) {
   try {
-    const data = await fetchFromTMDB('/tv/popular', `?language=tr-TR&page=${page}`);
+    if (type === 'anime') {
+      const data = await fetchFromTMDB('/discover/tv', `?language=tr-TR&page=${page}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc`);
+      return data?.results || [];
+    }
+    const data = await fetchFromTMDB(`/${type}/popular`, `?language=tr-TR&page=${page}`);
     if (!data || !data.results) {
       return [];
     }
     return data.results;
   } catch (error) {
-    console.error("Failed to fetch popular shows:", error);
+    console.error(`Failed to fetch popular ${type}s:`, error);
     return [];
   }
 }
@@ -80,9 +84,9 @@ export async function getShowDetails(id: string) {
 }
 
 /**
- * TMDB'den dizi ve sinema araması yapar.
+ * TMDB'den dizi ve sinema araması yapar. İsteğe bağlı filtreleme seçeneği eklidir.
  */
-export async function searchTrending(query: string, page: number = 1) {
+export async function searchTrending(query: string, page: number = 1, filterType?: string) {
   if (!query) return [];
   
   try {
@@ -91,12 +95,157 @@ export async function searchTrending(query: string, page: number = 1) {
       return [];
     }
     
-    // Sadece dizileri (tv) ve filmleri (movie) filtrele (kişiler vb. çıkmasın)
-    return data.results.filter(
+    // Gelen sonuçları (kişiler çıkmasın diye tv/movie) ana olarak süz
+    let results = data.results.filter(
       (item: any) => item.media_type === 'tv' || item.media_type === 'movie'
     );
+
+    // FilterType'a göre ikinci süzgeç (Eğer filtre uygulandıysa)
+    if (filterType) {
+      if (filterType === 'tv') {
+        results = results.filter((item: any) => item.media_type === 'tv');
+      } else if (filterType === 'movie') {
+        results = results.filter((item: any) => item.media_type === 'movie');
+      } else if (filterType === 'documentary') {
+        // Belgesel ID'si 99
+        results = results.filter((item: any) => item.genre_ids && item.genre_ids.includes(99));
+      } else if (filterType === 'anime') {
+        // Animasyon ID: 16 ve Origin Country: JP
+        results = results.filter(
+          (item: any) => 
+            item.media_type === 'tv' && 
+            item.genre_ids && 
+            item.genre_ids.includes(16) &&
+            item.origin_country && 
+            item.origin_country.includes('JP')
+        );
+      }
+    }
+
+    return results;
   } catch (error) {
     console.error(`Search failed for ${query}:`, error);
+    return [];
+  }
+}
+
+/**
+ * TMDB'den dizi ve sinema türlerini (kategorilerini) çeker.
+ */
+export async function getGenres(type: 'tv' | 'movie' = 'tv') {
+  try {
+    const data = await fetchFromTMDB(`/genre/${type}/list`, '?language=tr-TR');
+    if (!data || !data.genres) {
+      return [];
+    }
+    return data.genres;
+  } catch (error) {
+    console.error(`Failed to fetch ${type} genres:`, error);
+    return [];
+  }
+}
+
+/**
+ * Belirli bir türe göre (Sci-Fi, Dram vb.) populer içerikleri çeker.
+ */
+export async function getShowsByGenre(type: 'tv' | 'movie' | 'anime' = 'tv', genreId: string, page: number = 1) {
+  try {
+    if (type === 'anime') {
+      const data = await fetchFromTMDB('/discover/tv', `?language=tr-TR&page=${page}&with_genres=16,${genreId}&with_origin_country=JP&sort_by=popularity.desc`);
+      return data?.results || [];
+    }
+    const data = await fetchFromTMDB(`/discover/${type}`, `?language=tr-TR&page=${page}&with_genres=${genreId}&sort_by=popularity.desc`);
+    if (!data || !data.results) {
+      return [];
+    }
+    return data.results;
+  } catch (error) {
+    console.error(`Failed to fetch shows for genre ${genreId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Anime kategorisi TMDB'de Animation(16) türü ve Japon(JP) ülkesi filtresiyle oluşur.
+ */
+export async function getAnimeShows(page: number = 1) {
+  try {
+    const data = await fetchFromTMDB('/discover/tv', `?language=tr-TR&page=${page}&with_genres=16&with_origin_country=JP&sort_by=popularity.desc`);
+    if (!data || !data.results) {
+      return [];
+    }
+    return data.results;
+  } catch (error) {
+    console.error("Failed to fetch anime shows:", error);
+    return [];
+  }
+}
+
+/**
+ * Yayını devam eden veya yeni bölümleri/filmleri gelen içerikleri çeker.
+ */
+export async function getNewShows(type: 'tv' | 'movie' | 'anime' = 'tv', page: number = 1) {
+  try {
+    if (type === 'anime') {
+      // Son 3 ayda çıkmış veya şu an popüler olan yeni animeleri keşfetmek için.
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const dateStr = threeMonthsAgo.toISOString().split('T')[0];
+      const data = await fetchFromTMDB('/discover/tv', `?language=tr-TR&page=${page}&with_genres=16&with_origin_country=JP&first_air_date.gte=${dateStr}&sort_by=popularity.desc`);
+      return data?.results || [];
+    }
+    // TV için 'on_the_air', Movie için 'now_playing' kullanılır.
+    const endpoint = type === 'tv' ? '/tv/on_the_air' : '/movie/now_playing';
+    const data = await fetchFromTMDB(endpoint, `?language=tr-TR&page=${page}`);
+    if (!data || !data.results) {
+      return [];
+    }
+    return data.results;
+  } catch (error) {
+    console.error(`Failed to fetch new ${type}s:`, error);
+    return [];
+  }
+}
+
+/**
+ * Bitmiş (final yapmış) veya eskiden çıkmış içerikleri çeker.
+ */
+export async function getCompletedShows(type: 'tv' | 'movie' | 'anime' = 'tv', page: number = 1) {
+  try {
+    if (type === 'anime') {
+      const data = await fetchFromTMDB('/discover/tv', `?language=tr-TR&page=${page}&with_genres=16&with_origin_country=JP&with_status=3&sort_by=popularity.desc`);
+      return data?.results || [];
+    }
+    
+    // TV için 'with_status=3' (Ended). Filmler için vizyondan kalkmış eski filmler (Örn: Revenue olanlar veya geçmiş tarihli)
+    // Filmler için bitmiş kavramı tam uymadığı için geçmiş yılların popülerlerini çekebiliriz.
+    const query = type === 'tv' 
+      ? `?language=tr-TR&page=${page}&with_status=3&sort_by=popularity.desc`
+      : `?language=tr-TR&page=${page}&primary_release_date.lte=${new Date().toISOString().split('T')[0]}&sort_by=popularity.desc`;
+      
+    const data = await fetchFromTMDB(`/discover/${type}`, query);
+    if (!data || !data.results) {
+      return [];
+    }
+    return data.results;
+  } catch (error) {
+    console.error(`Failed to fetch completed ${type}s:`, error);
+    return [];
+  }
+}
+
+/**
+ * Belirli bir dizi veya filmin oyuncu kadrosunu (Cast) çeker.
+ */
+export async function getCredits(id: string, type: 'tv' | 'movie' = 'tv') {
+  try {
+    const data = await fetchFromTMDB(`/${type}/${id}/credits`, '?language=tr-TR');
+    if (!data || !data.cast) {
+      return [];
+    }
+    return data.cast;
+  } catch (error) {
+    console.error(`Failed to fetch credits for ${type} ID ${id}:`, error);
     return [];
   }
 }

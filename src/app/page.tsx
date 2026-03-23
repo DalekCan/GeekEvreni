@@ -1,15 +1,33 @@
 import { Show } from '@/types';
 import ShowCard from '@/components/ShowCard';
-import { getPopularShows } from '@/lib/tmdb';
+import { getPopularShows, getGenres, getShowsByGenre, getNewShows, getCompletedShows } from '@/lib/tmdb';
 import Pagination from '@/components/Pagination';
+import CategoryRibbon from '@/components/CategoryRibbon';
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ page?: string; genre?: string; filter?: string; format?: 'tv' | 'movie' | 'anime' }> }) {
   // Arama parametrelerini NextJs app router (server component) için asenkron yakalama
   const resolvedParams = await searchParams;
   const page = parseInt(resolvedParams.page || '1', 10);
+  const genre = resolvedParams.genre;
+  const filter = resolvedParams.filter;
+  const format = resolvedParams.format || 'tv';
   
-  // Gerçek API verisi yükleniyor (hata durumunda boş dizi dönecek şekilde ayarlanmıştır)
-  const shows: Show[] = await getPopularShows(page);
+  // 1. Kategorileri Çek (Anime ise şimdilik tv türlerini getiriyoruz)
+  const apiFormat = format === 'anime' ? 'tv' : format;
+  const genres = await getGenres(apiFormat);
+
+  // 2. Seçili Kategori, Format veya Filtreye Göre İçerikleri Çek
+  let shows: Show[] = [];
+  
+  if (filter === 'new') {
+    shows = await getNewShows(format, page);
+  } else if (filter === 'completed') {
+    shows = await getCompletedShows(format, page);
+  } else if (genre) {
+    shows = await getShowsByGenre(format, genre, page);
+  } else {
+    shows = await getPopularShows(format, page);
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -22,6 +40,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
           Aradığın diziyi bul, sevdiğin sezonların derinliklerine in ve toplulukla teorilerini paylaş.
         </p>
       </div>
+
+      {/* Dinamik Kategori Çubuğu */}
+      <CategoryRibbon genres={genres} />
 
       {/* Dizi Listesi Gelecek Alan (Placeholder) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
