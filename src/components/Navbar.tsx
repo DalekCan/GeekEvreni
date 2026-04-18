@@ -5,13 +5,16 @@ import LogoutButton from './auth/LogoutButton';
 import Search from './Search';
 
 export default async function Navbar() {
-  const supabase = await createServerSupabase();
-  
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  
-  const user = session?.user;
+  let user = null;
+  try {
+    const supabase = await createServerSupabase();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    user = session?.user;
+  } catch (e) {
+    // Çökme yaşanmaması için hatayı yut
+  }
 
   return (
     <nav className="bg-slate-900 border-b border-slate-800 text-slate-100 h-16 sticky top-0 z-50">

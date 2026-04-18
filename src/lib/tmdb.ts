@@ -249,3 +249,19 @@ export async function getCredits(id: string, type: 'tv' | 'movie' = 'tv') {
     return [];
   }
 }
+
+/**
+ * Belirli bir dizinin spesifik bir bölümünün detaylarını çeker.
+ */
+export async function getEpisodeDetails(showId: string, seasonNumber: string | number, episodeNumber: string | number) {
+  try {
+    const data = await fetchFromTMDB(`/tv/${showId}/season/${seasonNumber}/episode/${episodeNumber}`, '?language=tr-TR');
+    if (!data || data.success === false) {
+      return null;
+    }
+    return data;
+  } catch (error) {
+    console.error(`Failed to fetch episode details for Show ${showId} S${seasonNumber}E${episodeNumber}:`, error);
+    return null;
+  }
+}

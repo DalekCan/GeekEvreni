@@ -4,7 +4,7 @@ import { Show } from '@/types';
 import { useState } from 'react';
 import Image from 'next/image';
 
-export default function ShowHeader({ show }: { show: Show }) {
+export default function ShowHeader({ show, trackButton }: { show: Show, trackButton?: React.ReactNode }) {
   const [imageError, setImageError] = useState(false);
 
   const displayTitle = show.name || show.title || 'İsimsiz Dizi';
@@ -58,6 +58,7 @@ export default function ShowHeader({ show }: { show: Show }) {
                 <span>{formattedDate}</span>
               </div>
             )}
+            {trackButton}
           </div>
           
           <p className="text-slate-300 md:text-lg leading-relaxed max-w-3xl font-medium tracking-wide">
