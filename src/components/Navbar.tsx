@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createServerSupabase } from '@/lib/supabase-server';
-import GoogleLoginButton from './auth/GoogleLoginButton';
+import AuthButtons from './auth/AuthButtons';
 import LogoutButton from './auth/LogoutButton';
 import Search from './Search';
 
@@ -56,7 +56,7 @@ export default async function Navbar() {
                 <LogoutButton />
               </div>
             ) : (
-              <GoogleLoginButton />
+              <AuthButtons />
             )}
           </div>
         </div>
